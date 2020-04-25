@@ -37,7 +37,8 @@ namespace JsonToDB
 
 
             /*Parse JSON*/
-            string baseFolder = @"F:\facebook\Sinj_Zp9Ldcc4Fw\";
+            //PUT HERE THE FOLDER WHERE YOUR JSON FILES ARE LOCATED
+            string baseFolder = @"F:\facebook\";
             
             string[] fileEntries = Directory.GetFiles(baseFolder);
             foreach (string fileName in fileEntries)
