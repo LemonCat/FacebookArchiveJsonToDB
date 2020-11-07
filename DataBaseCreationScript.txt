@@ -110,3 +110,176 @@ GO
 ALTER DATABASE [fb_stats] SET  READ_WRITE 
 GO
 
+USE [fb_stats]
+GO
+
+/****** Object:  Table [dbo].[Message]    Script Date: 04/11/2020 12:01:33 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[Message](
+	[ID] [bigint] IDENTITY(1,1) NOT NULL,
+	[sender_name] [nvarchar](200) NULL,
+	[timestamp_ms] [bigint] NULL,
+	[content] [text] NULL,
+	[type] [nchar](50) NULL,
+	[link] [text] NULL,
+ CONSTRAINT [PK_Message] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+USE [fb_stats]
+GO
+
+/****** Object:  Table [dbo].[Participant]    Script Date: 04/11/2020 12:01:48 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[Participant](
+	[name] [nvarchar](200) NOT NULL,
+ CONSTRAINT [PK_Participant] PRIMARY KEY CLUSTERED 
+(
+	[name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+USE [fb_stats]
+GO
+
+/****** Object:  Table [dbo].[Photo]    Script Date: 04/11/2020 12:01:55 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[Photo](
+	[ID] [bigint] IDENTITY(1,1) NOT NULL,
+	[uri] [varchar](max) NULL,
+	[creation_timestamp] [bigint] NULL,
+	[messageID] [bigint] NOT NULL,
+ CONSTRAINT [PK_Photo] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+USE [fb_stats]
+GO
+
+/****** Object:  Table [dbo].[Reaction]    Script Date: 04/11/2020 12:02:02 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[Reaction](
+	[ID] [bigint] IDENTITY(1,1) NOT NULL,
+	[reaction] [nvarchar](200) NULL,
+	[actor] [nvarchar](200) NULL,
+	[messageID] [bigint] NOT NULL,
+ CONSTRAINT [PK_Reaction] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+USE [fb_stats]
+GO
+
+/****** Object:  Table [dbo].[Word]    Script Date: 04/11/2020 12:02:08 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[Word](
+	[ID] [bigint] IDENTITY(1,1) NOT NULL,
+	[MessageID] [bigint] NULL,
+	[timestamp_ms] [bigint] NULL,
+	[sender_name] [nvarchar](200) NULL,
+	[word] [nvarchar](max) NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+USE [fb_stats]
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[SplitWords]    Script Date: 04/11/2020 12:02:51 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+CREATE FUNCTION [dbo].[SplitWords](@text varchar(8000)) 
+   RETURNS @words TABLE (
+      pos smallint, 
+      value varchar(8000)
+   ) 
+AS 
+BEGIN 
+   /*Stolen from http://madprops.org/blog/t-sql-to-split-a-varchar-into-words */    
+   SET @text = RTRIM(@text)
+ 
+   DECLARE @delims varchar(10) 
+   SET @delims = ' ,:/-'
+   DECLARE @pos smallint, @i smallint, @s varchar(8000)
+ 
+   SET @pos = 1 
+ 
+   WHILE @pos < LEN(@text) 
+      AND CHARINDEX(SUBSTRING(@text, @pos, 1), @delims) > 0 
+      SET @pos = @pos + 1 
+ 
+   WHILE @pos <= LEN(@text) 
+   BEGIN 
+      SET @i = PATINDEX('%[' + @delims + ']%', 
+         SUBSTRING(@text, @pos, len(@text) - @pos + 1)) 
+      IF @i > 0 
+      BEGIN 
+         SET @i = @i + @pos - 1 
+         IF @i > @pos 
+         BEGIN 
+            -- @i now holds the earliest delimiter in the string
+            SET @s = SUBSTRING(@text, @pos, @i - @pos)
+            INSERT INTO @words 
+            VALUES (@pos, @s)
+         END 
+         SET @pos = @i + 1 
+ 
+         WHILE @pos < LEN(@text) 
+            AND CHARINDEX(SUBSTRING(@text, @pos, 1), @delims) > 0 
+            SET @pos = @pos + 1 
+      END
+      ELSE 
+      BEGIN
+         SET @s = SUBSTRING(@text, @pos, LEN(@text) - @pos + 1)
+         INSERT INTO @words 
+         VALUES (@pos, @s) SET @pos = LEN(@text) + 1
+      END 
+   END
+   -- remove common words that we don't want to search for 
+   DELETE FROM @words 
+   WHERE value IN ('an', 'the', 'of', 'and', '&') 
+   RETURN 
+END 
+
+GO
+
